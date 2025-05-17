@@ -24,11 +24,11 @@ public class ProcessPayment {
 
     final var payment =
         Payment.create(UUID.randomUUID().toString(), orderId, amount, cardNumber, paymentMethod);
-    final var processedPayment = paymentGateway.processPayment(payment);
+    final var processedPayment = this.paymentGateway.processPayment(payment);
 
-    eventPublisher.publish(
-        new PaymentProcessedEvent(
-            Integer.parseInt(orderId), "APPROVED".equals(processedPayment.status())));
+    this.paymentGateway.save(processedPayment);
+    this.eventPublisher.publish(
+        new PaymentProcessedEvent(orderId, "APPROVED".equals(processedPayment.status())));
 
     return processedPayment;
   }
