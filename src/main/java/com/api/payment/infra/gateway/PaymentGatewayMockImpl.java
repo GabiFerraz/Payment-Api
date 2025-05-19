@@ -8,10 +8,12 @@ import com.api.payment.infra.persistence.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentGatewayMockImpl implements PaymentGateway {
 
   private final PaymentRepository paymentRepository;
@@ -39,6 +41,7 @@ public class PaymentGatewayMockImpl implements PaymentGateway {
   @Override
   public Payment save(final Payment payment) {
     try {
+      log.info("Saving payment for orderId: {}, status: {}", payment.orderId(), payment.status());
       final var entity =
           PaymentEntity.builder()
               .orderId(payment.orderId())
@@ -50,16 +53,20 @@ public class PaymentGatewayMockImpl implements PaymentGateway {
               .build();
 
       final var saved = this.paymentRepository.save(entity);
+      final var response = this.toResponse(saved);
 
-      return this.toResponse(saved);
+      log.info("Saved payment for orderId: {}, status: {}", payment.orderId(), payment.status());
+
+      return response;
     } catch (IllegalArgumentException e) {
-      throw new GatewayException("No payment found for orderId: " + payment.orderId());
+      log.error("Error saving payment for orderId: {}", payment.orderId(), e);
+      throw new GatewayException("Failed to save payment for orderId: " + payment.orderId());
     }
   }
 
   private Payment toResponse(final PaymentEntity entity) {
     return new Payment(
-        String.valueOf(entity.getId()),
+        entity.getId().toString(),
         entity.getOrderId(),
         entity.getAmount(),
         entity.getCardNumber(),

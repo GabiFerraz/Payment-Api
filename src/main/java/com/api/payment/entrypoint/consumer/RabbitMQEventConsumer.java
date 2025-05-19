@@ -19,27 +19,45 @@ public class RabbitMQEventConsumer {
   private final PaymentGateway paymentGateway;
 
   @RabbitListener(queues = RabbitMQConfig.PROCESS_PAYMENT_QUEUE)
-  public void consumeProcessPaymentEvent(ProcessPaymentEvent event) {
-    log.info("Received ProcessPaymentEvent for orderId: {}", event.orderId());
+  public void consumeProcessPaymentEvent(final ProcessPaymentEvent event) {
+    try {
+      log.info("Received ProcessPaymentEvent for orderId: {}", event.orderId());
 
-    processPayment.execute(
-        event.orderId(), event.amount(), event.cardNumber(), event.paymentMethod());
+      this.processPayment.execute(
+          event.orderId(), event.amount(), event.cardNumber(), event.paymentMethod());
+    } catch (Exception e) {
+      log.error("Failed to process payment for orderId: {}", event.orderId(), e);
+    }
   }
 
   @RabbitListener(queues = RabbitMQConfig.REFUND_PAYMENT_QUEUE)
-  public void consumeRefundPaymentEvent(RefundPaymentEvent event) {
-    log.info(
-        "Received RefundPaymentEvent for orderId: {}, amount: {}", event.orderId(), event.amount());
+  public void consumeRefundPaymentEvent(final RefundPaymentEvent event) {
+    try {
+      log.info(
+          "Received RefundPaymentEvent for orderId: {}, amount: {}",
+          event.orderId(),
+          event.amount());
 
-    final var payment = paymentGateway.findByOrderId(String.valueOf(event.orderId()));
-    if (payment.isPresent()) {
-      final var paymentFound = payment.get();
-      final var refundedPayment = paymentFound.refund();
+      final var payment = this.paymentGateway.findByOrderId(String.valueOf(event.orderId()));
 
-      paymentGateway.save(refundedPayment);
-      log.info("Payment for orderId: {} updated to REFUNDED", event.orderId());
-    } else {
-      log.warn("No payment found for orderId: {}", event.orderId());
+      if (payment.isPresent()) {
+        final var paymentFound = payment.get();
+        if ("APPROVED".equals(paymentFound.status())) {
+          final var refundedPayment = paymentFound.refund();
+
+          this.paymentGateway.save(refundedPayment);
+          log.info("Payment for orderId: {} updated to REFUNDED", event.orderId());
+        } else {
+          log.info(
+              "Payment for orderId: {} cannot be refunded, current status: {}",
+              event.orderId(),
+              paymentFound.status());
+        }
+      } else {
+        log.warn("No payment found for orderId: {}", event.orderId());
+      }
+    } catch (Exception e) {
+      log.error("Error processing RefundPaymentEvent for orderId: {}", event.orderId(), e);
     }
   }
 }
