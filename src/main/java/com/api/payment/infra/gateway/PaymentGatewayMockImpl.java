@@ -42,6 +42,22 @@ public class PaymentGatewayMockImpl implements PaymentGateway {
   public Payment save(final Payment payment) {
     try {
       log.info("Saving payment for orderId: {}, status: {}", payment.orderId(), payment.status());
+      final var existEntity = this.paymentRepository.findByOrderId(payment.orderId());
+
+      if (existEntity.isPresent()) {
+        final var updated = existEntity.get();
+        updated.setStatus(payment.status());
+        log.info("Payment for orderId: {} updated to {}", payment.orderId(), payment.status());
+
+        final var saved = this.paymentRepository.save(updated);
+        log.info(
+            "Saved updated payment for orderId: {}, status: {}",
+            payment.orderId(),
+            payment.status());
+
+        return this.toResponse(saved);
+      }
+
       final var entity =
           PaymentEntity.builder()
               .orderId(payment.orderId())
