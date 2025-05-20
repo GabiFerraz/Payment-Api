@@ -126,10 +126,9 @@
 				<configuration>
 					<excludes>
 						<exclude>**/com/api/payment/core/dto/**</exclude>
-						<exclude>**/com/api/payment/entrypoint/config/**</exclude>
 						<exclude>**/com/api/payment/presenter/**</exclude>
 						<exclude>**/com/api/payment/PaymentApplication**</exclude>
-						<exclude>**/com/api/payment/core/domain/exception/ErrorDetail**</exclude>
+						<exclude>**/com/api/payment/event/**</exclude>
 					</excludes>
 				</configuration>
 				<executions>
